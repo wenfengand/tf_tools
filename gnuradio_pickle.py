@@ -1,6 +1,7 @@
 #encoding:utf8
 import pickle 
 import numpy as np 
+import time 
 train_ratio = 0.5
 # Note: This program is only tested on python3. 
 def to_onehot(yy):
@@ -16,6 +17,7 @@ class input_data():
         #  You will need to seperately download or generate this file
         Xd = pickle.load(open(file_name,'rb'),encoding='latin1')
         snrs,mods = map(lambda j: sorted(list(set(map(lambda x: x[j], Xd.keys())))), [1,0])
+        self.mods = mods 
         X = []  
         self.lbl = []
         for mod in mods:
@@ -27,7 +29,7 @@ class input_data():
         # Partition the data
         #  into training and test sets of the form we can train/test on 
         #  while keeping SNR and Mod labels handy for each
-        np.random.seed(2018)
+        np.random.seed(int(time.time()))
         n_examples = X.shape[0]
         n_train = int(n_examples * train_ratio)
         self.train_idx = np.random.choice(range(0,n_examples), size=n_train, replace=False)
@@ -79,4 +81,28 @@ class input_data():
         if(num > train_X_i.shape[0]):
             raise RuntimeError('num > train_samples')
         train_idx = np.random.choice(range(0, train_X_i.shape[0]), size=num, replace=False)
+        return train_X_i[train_idx], train_Y_i[train_idx]
+    def next_train_batch_snr_mod(self, num, snr, mod):
+
+        # lbl is [idx, mod, snr]
+        train_SNRs = list(map(lambda x: self.lbl[x][1], self.train_idx))
+        train_MODs = list(map(lambda x: self.lbl[x][0], self.train_idx))
+        
+        # return tuple
+        snr_suit = np.where(np.array(train_SNRs)==snr)
+        mod_suit = np.where(np.array(train_MODs)==mod)
+
+
+        # change tuple to list
+        snr_suit = set(*snr_suit)
+        mod_suit = set(*mod_suit)
+
+        idx = list(snr_suit & mod_suit)
+        train_X_i = self.x_train[ idx]
+        train_Y_i = self.y_train[ idx] 
+
+        if(num > train_X_i.shape[0]):
+            raise RuntimeError('num > train_samples')
+        train_idx = np.random.choice(range(0, train_X_i.shape[0]), size=num, replace=False)
+        #print('train idx is ', train_idx)
         return train_X_i[train_idx], train_Y_i[train_idx]
