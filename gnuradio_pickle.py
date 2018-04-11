@@ -62,13 +62,21 @@ class input_data():
         test_idx = np.random.choice(range(0, self.test_samples), size=num, replace=False)
         return self.x_test[test_idx], self.y_test[test_idx]
        
-    def next_test_batch_snr(self, snr):
+    def next_test_batch_snr(self, num, snr):
         test_SNRs = list(map(lambda x: self.lbl[x][1], self.test_idx))
         test_X_i = self.x_test[np.where(np.array(test_SNRs)==snr)]
         test_Y_i = self.y_test[np.where(np.array(test_SNRs)==snr)] 
-        return test_X_i, test_Y_i
-    def next_train_batch_snr(self, snr):
+
+        if(num > test_X_i.shape[0]):
+            raise RuntimeError('num > test_samples')
+        test_idx = np.random.choice(range(0, test_X_i.shape[0]), size=num, replace=False)
+        return test_X_i[test_idx], test_Y_i[test_idx]
+    def next_train_batch_snr(self, num, snr):
         train_SNRs = list(map(lambda x: self.lbl[x][1], self.train_idx))
         train_X_i = self.x_train[np.where(np.array(train_SNRs)==snr)]
         train_Y_i = self.y_train[np.where(np.array(train_SNRs)==snr)] 
-        return train_X_i, train_Y_i
+
+        if(num > train_X_i.shape[0]):
+            raise RuntimeError('num > train_samples')
+        train_idx = np.random.choice(range(0, train_X_i.shape[0]), size=num, replace=False)
+        return train_X_i[train_idx], train_Y_i[train_idx]
