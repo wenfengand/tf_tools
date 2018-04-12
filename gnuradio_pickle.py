@@ -2,7 +2,11 @@
 import pickle 
 import numpy as np 
 import time 
+import normalized
+
 train_ratio = 0.5
+need_normalized = True 
+sample_channel = 2
 # Note: This program is only tested on python3. 
 def to_onehot(yy):
     yy1 = np.zeros([len(yy), max(yy)+1])
@@ -26,6 +30,7 @@ class input_data():
                 for i in range(Xd[(mod,snr)].shape[0]):  self.lbl.append((mod,snr))
         X = np.vstack(X)
 
+
         # Partition the data
         #  into training and test sets of the form we can train/test on 
         #  while keeping SNR and Mod labels handy for each
@@ -34,8 +39,17 @@ class input_data():
         n_train = int(n_examples * train_ratio)
         self.train_idx = np.random.choice(range(0,n_examples), size=n_train, replace=False)
         self.test_idx = list(set(range(0,n_examples))-set(self.train_idx))
-        X_train = X[self.train_idx]
-        X_test =  X[self.test_idx]
+
+        # normalize data 
+        if True == need_normalized:
+            for sample_idx in range(n_examples):
+                for channel_idx in range(sample_channel):
+                    X[sample_idx, channel_idx, :] = \
+                            normalized.my_normalized(X[sample_idx, channel_idx, :]).copy()
+
+        # need slice or deep copy?
+        X_train = X[self.train_idx,:,:]
+        X_test =  X[self.test_idx,:,:]
 
         Y_train = to_onehot(list(map(lambda x: mods.index(self.lbl[x][0]),self.train_idx)))
         Y_test = to_onehot(list(map(lambda x: mods.index(self.lbl[x][0]), self.test_idx)))
@@ -52,6 +66,37 @@ class input_data():
         self.test_samples = self.x_test.shape[0]
         self.samples = self.train_samples + self.test_samples
 
+        # store different snr and different mod index
+        self.test_snr_idx = {}
+        self.test_mod_idx = {}
+        self.train_snr_idx = {}
+        self.train_mod_idx = {}
+         # lbl is [idx, mod, snr]
+        train_SNRs = list(map(lambda x: self.lbl[x][1], self.train_idx))
+        train_MODs = list(map(lambda x: self.lbl[x][0], self.train_idx))
+        
+        test_SNRs = list(map(lambda x: self.lbl[x][1], self.test_idx))
+        test_MODs = list(map(lambda x: self.lbl[x][0], self.test_idx))
+        
+        for snr in snrs:
+            # return tuple
+            snr_suit = np.where(np.array(train_SNRs)==snr)
+            # change tuple to list to set
+            self.train_snr_idx[snr]  = set(*snr_suit)
+
+            snr_suit = np.where(np.array(test_SNRs)==snr)
+            self.test_snr_idx[snr]  = set(*snr_suit)
+        for mod in mods:
+            mod_suit = np.where(np.array(train_MODs)==mod)
+            self.train_mod_idx[mod] = set(*mod_suit)
+
+            mod_suit = np.where(np.array(test_MODs)==mod)
+            self.test_mod_idx[mod] = set(*mod_suit)
+
+      
+        
+        
+
     def next_train_batch(self, num):
         if(num > self.train_samples):
             raise RuntimeError('num > self.train_samples')
@@ -65,18 +110,18 @@ class input_data():
         return self.x_test[test_idx], self.y_test[test_idx]
        
     def next_test_batch_snr(self, num, snr):
-        test_SNRs = list(map(lambda x: self.lbl[x][1], self.test_idx))
-        test_X_i = self.x_test[np.where(np.array(test_SNRs)==snr)]
-        test_Y_i = self.y_test[np.where(np.array(test_SNRs)==snr)] 
+        idx = list(self.test_snr_idx[snr])
+        test_X_i = self.x_test[idx]
+        test_Y_i = self.y_test[idx] 
 
         if(num > test_X_i.shape[0]):
             raise RuntimeError('num > test_samples')
         test_idx = np.random.choice(range(0, test_X_i.shape[0]), size=num, replace=False)
         return test_X_i[test_idx], test_Y_i[test_idx]
     def next_train_batch_snr(self, num, snr):
-        train_SNRs = list(map(lambda x: self.lbl[x][1], self.train_idx))
-        train_X_i = self.x_train[np.where(np.array(train_SNRs)==snr)]
-        train_Y_i = self.y_train[np.where(np.array(train_SNRs)==snr)] 
+        idx = list(self.train_snr_idx[snr])
+        train_X_i = self.x_train[idx]
+        train_Y_i = self.y_train[idx] 
 
         if(num > train_X_i.shape[0]):
             raise RuntimeError('num > train_samples')
@@ -84,20 +129,7 @@ class input_data():
         return train_X_i[train_idx], train_Y_i[train_idx]
     def next_train_batch_snr_mod(self, num, snr, mod):
 
-        # lbl is [idx, mod, snr]
-        train_SNRs = list(map(lambda x: self.lbl[x][1], self.train_idx))
-        train_MODs = list(map(lambda x: self.lbl[x][0], self.train_idx))
-        
-        # return tuple
-        snr_suit = np.where(np.array(train_SNRs)==snr)
-        mod_suit = np.where(np.array(train_MODs)==mod)
-
-
-        # change tuple to list
-        snr_suit = set(*snr_suit)
-        mod_suit = set(*mod_suit)
-
-        idx = list(snr_suit & mod_suit)
+        idx = list(self.train_snr_idx[snr] & self.train_mod_idx[mod])
         train_X_i = self.x_train[ idx]
         train_Y_i = self.y_train[ idx] 
 
