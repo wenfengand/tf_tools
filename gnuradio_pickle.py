@@ -3,10 +3,13 @@ import pickle
 import numpy as np 
 import time 
 import normalized
+import random 
 
 train_ratio = 0.5
 need_normalized = True 
 sample_channel = 2
+threshold_variance_rate = 0.01
+remove_variance = True   
 # Note: This program is only tested on python3. 
 def to_onehot(yy):
     yy1 = np.zeros([len(yy), max(yy)+1])
@@ -24,28 +27,51 @@ class input_data():
         self.mods = mods 
         X = []  
         self.lbl = []
+        self.bad_idx = set()
         for mod in mods:
             for snr in snrs:
                 X.append(Xd[(mod,snr)])
                 for i in range(Xd[(mod,snr)].shape[0]):  self.lbl.append((mod,snr))
         X = np.vstack(X)
-
-
+      
         # Partition the data
         #  into training and test sets of the form we can train/test on 
         #  while keeping SNR and Mod labels handy for each
         np.random.seed(int(time.time()))
         n_examples = X.shape[0]
-        n_train = int(n_examples * train_ratio)
-        self.train_idx = np.random.choice(range(0,n_examples), size=n_train, replace=False)
-        self.test_idx = list(set(range(0,n_examples))-set(self.train_idx))
-
+        
         # normalize data 
         if True == need_normalized:
             for sample_idx in range(n_examples):
                 for channel_idx in range(sample_channel):
                     X[sample_idx, channel_idx, :] = \
                             normalized.my_normalized(X[sample_idx, channel_idx, :]).copy()
+          # Remove some bad data
+        self.bad_idx = set([])
+        if remove_variance == True:
+            all_var = np.zeros(X.shape[0])
+            for i in range(X.shape[0]):
+                # i is index
+                temp_array = np.array(X[i,0,:])
+                all_var[i] = temp_array.var()
+            rank_all_var = sorted(all_var)
+            threshold_idx = int(X.shape[0] * threshold_variance_rate)
+            threshold_variance = rank_all_var[threshold_idx]
+
+            for i in range(X.shape[0]):
+                if all_var[i] <= threshold_variance:
+                    self.bad_idx.update(set([i]))
+            print("Bad index number is ", len(self.bad_idx))
+            print("threshold variance is ", threshold_variance)
+            print("threshold idx is ", threshold_idx)
+
+        n_train = int(n_examples * train_ratio)
+        self.train_idx = np.random.choice(range(0,n_examples), size=n_train, replace=False)
+        self.train_idx = list(set(self.train_idx) - self.bad_idx)
+        random.shuffle(self.train_idx)
+
+        self.test_idx = list(set(range(0,n_examples))-set(self.train_idx)- self.bad_idx)
+        random.shuffle(self.test_idx)
 
         # need slice or deep copy?
         X_train = X[self.train_idx,:,:]
