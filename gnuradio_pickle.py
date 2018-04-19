@@ -2,7 +2,7 @@
 import pickle 
 import numpy as np 
 import time 
-import normalized
+import tf_tools.normalized as normalized
 import random 
 
 train_ratio = 0.5
