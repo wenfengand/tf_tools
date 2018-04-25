@@ -50,16 +50,27 @@ class input_data():
         self.bad_idx = set([])
         if remove_variance == True:
             all_var = np.zeros(X.shape[0])
+            all_var_q = np.zeros(X.shape[0])
             for i in range(X.shape[0]):
                 # i is index
                 temp_array = np.array(X[i,0,:])
                 all_var[i] = temp_array.var()
+
+                temp_array = np.array(X[i,1,:])
+                all_var_q[i] = temp_array.var()
+
             rank_all_var = sorted(all_var)
             threshold_idx = int(X.shape[0] * threshold_variance_rate)
             threshold_variance = rank_all_var[threshold_idx]
 
+            rank_all_var_q = sorted(all_var_q)
+            threshold_idx_q = int(X.shape[0] * threshold_variance_rate)
+            threshold_variance_q = rank_all_var_q[threshold_idx_q]
+
             for i in range(X.shape[0]):
                 if all_var[i] <= threshold_variance:
+                    self.bad_idx.update(set([i]))
+                if all_var_q[i] <= threshold_variance_q:
                     self.bad_idx.update(set([i]))
             print("Bad index number is ", len(self.bad_idx))
             print("threshold variance is ", threshold_variance)
