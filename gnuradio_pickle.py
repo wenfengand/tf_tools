@@ -7,9 +7,9 @@ import random
 
 train_ratio = 0.5
 need_normalized = True 
-sample_channel = 2
+
 threshold_variance_rate = 0.01
-remove_variance = True   
+remove_variance = False   
 # Note: This program is only tested on python3. 
 def to_onehot(yy):
     yy1 = np.zeros([len(yy), max(yy)+1])
@@ -39,7 +39,7 @@ class input_data():
         #  while keeping SNR and Mod labels handy for each
         np.random.seed(int(time.time()))
         n_examples = X.shape[0]
-        
+        sample_channel = X.shape[1]
         # normalize data 
         if True == need_normalized:
             for sample_idx in range(n_examples):
