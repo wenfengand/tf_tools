@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np 
 import random 
 
-def plot_confusion_matrix(predicted, labels, classes, file_name, title):
+def plot_confusion_matrix(predicted, labels, classes, file_name, title, format):
     conf = np.zeros([len(classes),len(classes)])
     confnorm = np.zeros([len(classes),len(classes)])
     for i in range(0,predicted.shape[0]):
@@ -21,7 +21,7 @@ def plot_confusion_matrix(predicted, labels, classes, file_name, title):
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-    plt.savefig(file_name)
+    plt.savefig(file_name, format=format)
 if __name__ == '__main__':
     # test it
     batch_size = 100
