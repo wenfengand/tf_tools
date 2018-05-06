@@ -9,7 +9,7 @@ train_ratio = 0.5
 need_normalized = True 
 
 threshold_variance_rate = 0.01
-remove_variance = False   
+remove_variance = True    
 # Note: This program is only tested on python3. 
 def to_onehot(yy):
     yy1 = np.zeros([len(yy), max(yy)+1])
